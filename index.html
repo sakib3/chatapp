@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Chat</title>
+		<style>
+		#chat{
+			height: 500px;
+		}
+		</style>
+	</head>
+	<body>
+		<div id="chat"></div>
+		<form id="send-message">
+			<input size="35" id="message"/>
+			<input type="submit"/>
+		</form>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
+		<script>
+			jQuery(function($){
+				var socket = io.connect();
+				var $messageForm = $('#send-message');
+				var $messageBox = $('#message');
+				var $chat = $('#chat');
+				//everytime when we submit the form , it will send to server
+				$messageForm.submit(function(e){
+					//prevent the default behviour of form submission
+					e.preventDefault();
+					//get value from the messageBox and write to the socket
+					socket.emit('send message', $messageBox.val());
+					//clear the messageBox value
+					$messageBox.val('');
+				});
+				//receive the message in client side
+				socket.on('new message', function(data){
+					$chat.append(data+"<br/>")
+				});
+			});
+		</script>
+	</body>
+</html>
