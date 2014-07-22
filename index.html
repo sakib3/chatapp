@@ -6,22 +6,70 @@
 		#chat{
 			height: 500px;
 		}
+		#contentWrap{
+			display:none;
+		}
+		#chatWrap{
+			float:left;
+			border: 1px #000 solid;
+		}
 		</style>
 	</head>
 	<body>
-		<div id="chat"></div>
-		<form id="send-message">
-			<input size="35" id="message"/>
-			<input type="submit"/>
-		</form>
+		<div id="nickWrap">
+			<p>Enter a username </p>
+			<p id="nickError"></p>
+			<form id="setNick">
+				<input size="35" id="nickname"/>
+				<input type="submit"/>
+			</form>
+		</div>
+
+		<div id="contentWrap">
+			<div id="chatWrap">
+				<div id="chat"></div>
+				<form id="send-message">
+					<input size="35" id="message"/>
+					<input type="submit"/>
+				</form>
+			</div>
+			<div id="users"></div>
+		</div>
+
 		<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 		<script src="/socket.io/socket.io.js"></script>
 		<script>
 			jQuery(function($){
 				var socket = io.connect();
+				var $nickForm = $('#setNick');
+				var $nickError = $('#nickError');
+				var $nickBox = $('#nickname');
+				var $users = $('#users');
 				var $messageForm = $('#send-message');
 				var $messageBox = $('#message');
 				var $chat = $('#chat');
+
+				$nickForm.submit(function(e){
+					e.preventDefault();
+					socket.emit('new user', $nickBox.val(),function(data){
+							if(data){
+								$('#nickWrap').hide();
+								$('#contentWrap').show();
+							} else{
+								$nickError.html('That username is already taken! Try again.');
+							}
+					});
+					$nickBox.val('');
+				})
+
+				socket.on('usernames', function(data){
+					var html ='';
+					for ( i = 0 ; i<data.length ; i++) {
+						html += data[i] + '<br/>';
+					}
+					$users.html(html);
+				});
+
 				//everytime when we submit the form , it will send to server
 				$messageForm.submit(function(e){
 					//prevent the default behviour of form submission
@@ -33,7 +81,7 @@
 				});
 				//receive the message in client side
 				socket.on('new message', function(data){
-					$chat.append(data+"<br/>")
+					$chat.append('<b>'+data.nick+ ': </b>'+data.msg+"<br/>");
 				});
 			});
 		</script>
