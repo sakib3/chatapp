@@ -68,11 +68,11 @@
 							}
 					});
 					$nickBox.val('');
-				})
+				});
 
 				socket.on('usernames', function(data){
 					var html ='';
-					for ( i = 0 ; i<data.length ; i++) {
+					for (var i = 0 ; i<data.length ; i++) {
 						html += data[i] + '<br/>';
 					}
 					$users.html(html);
@@ -89,10 +89,23 @@
 					//clear the messageBox value
 					$messageBox.val('');
 				});
+
 				//receive the message in client side
+                //get old msg
+                socket.on('load old msgs', function(docs){
+                    for(var i=0;i < docs.length;i++){
+                        displayMsg(docs[i]);
+                    }
+                });
+                //get new msg
 				socket.on('new message', function(data){
-					$chat.append('<span class="msg"><b>'+data.nick+ ': </b>'+data.msg+"</span><br/>");
+                    displayMsg(data);
 				});
+
+                function displayMsg(data){
+                    $chat.append('<span class="msg"><b>'+data.nick+ ': </b>'+data.msg+"</span><br/>");
+                }
+                //whisper msg
 				socket.on('whisper', function(data){
 					//console.log('Whisper');
 					$chat.append('<span class="whisper"> <b>'+data.nick+ ': </b>'+data.msg+"</span><br/>");

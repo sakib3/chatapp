@@ -2,10 +2,29 @@ console.log('Server started.');
 var express = require('express'),
 	app = express(),
 	server = require('http').createServer(app),
-	io = require('socket.io').listen(server)
+	io = require('socket.io').listen(server),
+	mongoose = require('mongoose'),
 	users = {};
 
 server.listen(3000);
+
+//connect to database
+mongoose.connect('mongodb://localhost/chat', function(err){
+	if (err) {
+		console.log(err);
+	} else{
+		console.log('Connected to the mongodb');
+	}
+});
+//define schema for mongo document
+var chatSchema = mongoose.Schema({
+	nick: String,
+	msg: String,
+	created: { type: Date, default: Date.now }
+});
+
+//define collection in mongo document
+var Chat = mongoose.model('Message', chatSchema);
 
 //create a route
 app.get('/', function(req, res){
@@ -15,6 +34,17 @@ app.get('/', function(req, res){
 
 //receive the event from client
 io.sockets.on('connection', function(socket){
+
+    Chat.find({},function(err,docs){
+        if(err) throw err;
+        console.log('Sending old msg!');
+        socket.emit('load old msgs', docs);
+    });
+
+    //limit the query: get last 8 conversation
+    //var query = Chat.find({});
+    //query.sort('-created').limit(8).exec(function(err,docs){});
+
 	socket.on('new user', function(data, callback){
 		if(data in users){
 			callback(false);
@@ -53,10 +83,19 @@ io.sockets.on('connection', function(socket){
 			}
 			
 		} else{
-			//broadcast the received msg to all including the sender
-			io.sockets.emit('new message', { msg:msg, nick:socket.nickname });
-			//broadcast the received msg to all except the sender
-			//io.broadcast.emit('new message', data);
+			//create a new document
+			var newMsg = new Chat({ msg:msg, nick:socket.nickname });
+			//store in mongodb
+			newMsg.save(function(err){
+				if(err) 
+					throw err;
+
+				//broadcast the received msg to all including the sender
+				io.sockets.emit('new message', { msg:msg, nick:socket.nickname });
+				//broadcast the received msg to all except the sender
+				//io.broadcast.emit('new message', data);
+			});
+			
 		}
 		
 	});
