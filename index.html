@@ -11,7 +11,7 @@
 		}
 		#chatWrap{
 			float:left;
-			border: 1px #000 solid;
+
 		}
 		.error{
 			color:red;
@@ -21,6 +21,76 @@
 			font-style: italic;
 
 		}
+        .msg {
+            box-sizing: border-box;
+            float: left;
+            width: auto;
+            max-width: 80%;
+            position: relative;
+            clear: both;
+
+            background: #95c2fd;
+            background-image: -webkit-gradient(linear, left bottom, left top, color-stop(0.15, #bee2ff), color-stop(1, #95c2fd));
+            background-image: -webkit-linear-gradient(bottom, #bee2ff 15%, #95c2fd 100%);
+            background-image: -moz-linear-gradient(bottom, #bee2ff 15%, #95c2fd 100%);
+            background-image: -ms-linear-gradient(bottom, #bee2ff 15%, #95c2fd 100%);
+            background-image: -o-linear-gradient(bottom, #bee2ff 15%, #95c2fd 100%);
+            background-image: linear-gradient(bottom, #bee2ff 15%, #95c2fd 100%);
+            filter: progid:DXImageTransform.Microsoft.gradient(GradientType=0,startColorstr='#95c2fd', endColorstr='#bee2ff');
+
+            border: transparent 1px rgba(0,0,0,0.5);
+            -webkit-border-radius: 20px;
+            -moz-border-radius: 20px;
+            border-radius: 20px;
+
+            -webkit-box-shadow: inset 0 8px 5px rgba(255,255,255,0.65), 0 1px 2px rgba(0,0,0,0.2);
+            -moz-box-shadow: inset 0 8px 5px rgba(255,255,255,0.65), 0 1px 2px rgba(0,0,0,0.2);
+            box-shadow: inset 0 8px 5px rgba(255,255,255,0.65), 0 1px 2px rgba(0,0,0,0.2);
+
+            margin-bottom: 20px;
+            padding: 6px 20px;
+            color: #000;
+            text-shadow: 0 1px 1px rgba(255,255,255,0.8);
+            word-wrap: break-word;
+        }
+
+        .msg:before, .msg:after {
+            border-radius: 20px / 5px;
+            content: '';
+            display: block;
+            position: absolute;
+        }
+        .msg:before {
+            border: 10px solid transparent;
+            border-bottom-color: white;
+            bottom: 0px;
+            left: -7px;
+            z-index: -2;
+        }
+        .msg:after {
+            border: 8px solid transparent;
+            border-bottom-color: #bee2ff; /* arrow color */
+            bottom: 1px;
+            left: -5px;
+        }
+
+
+        .msg-alt {
+            float: right;
+        }
+        .msg-alt:before {
+            left: auto;
+            right: -7px;
+        }
+        .msg-alt:after {
+            left: auto;
+            right: -5px;
+        }
+
+        .msg p {
+            font-size: 1.4em;
+        }
+
 		</style>
 	</head>
 	<body>
@@ -56,24 +126,35 @@
 				var $messageForm = $('#send-message');
 				var $messageBox = $('#message');
 				var $chat = $('#chat');
-
+                var oldmsg;
 				$nickForm.submit(function(e){
 					e.preventDefault();
 					socket.emit('new user', $nickBox.val(),function(data){
 							if(data){
 								$('#nickWrap').hide();
 								$('#contentWrap').show();
+                                for(var i=0;i < oldmsg.length;i++){
+                                    if(  (oldmsg[i].nick === $nickBox.val()) || (oldmsg[i].to === $nickBox.val())  ){
+                                        displayMsg(oldmsg[i]);
+                                    }
+
+                                }
 							} else{
 								$nickError.html('That username is already taken! Try again.');
 							}
 					});
-					$nickBox.val('');
+					//$nickBox.val('');
 				});
 
 				socket.on('usernames', function(data){
 					var html ='';
 					for (var i = 0 ; i<data.length ; i++) {
-						html += data[i] + '<br/>';
+                        //chat name list should not contains user self name
+                        if($nickBox.val()!==data[i]){
+                            console.log('nickBox.val '+$nickBox.val()+'data[i] '+data[i]);
+                            html += '<a href="#'+data[i]+'">'+data[i] +'</a>'+ '<br/>';
+                        }
+
 					}
 					$users.html(html);
 				});
@@ -82,8 +163,9 @@
 				$messageForm.submit(function(e){
 					//prevent the default behviour of form submission
 					e.preventDefault();
+                    console.log('hash val'+$(location).attr('hash'));
 					//get value from the messageBox and write to the socket
-					socket.emit('send message', $messageBox.val(), function(data){
+					socket.emit('send message', $(location).attr('hash')+' '+$messageBox.val(), function(data){
 						$chat.append('<span class="error">'+data+"</span><br/>");
 					});
 					//clear the messageBox value
@@ -94,8 +176,9 @@
                 //get old msg
                 socket.on('load old msgs', function(docs){
                     for(var i=0;i < docs.length;i++){
-                        displayMsg(docs[i]);
+                        //displayMsg(docs[i]);
                     }
+                    oldmsg=docs;
                 });
                 //get new msg
 				socket.on('new message', function(data){

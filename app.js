@@ -18,7 +18,9 @@ mongoose.connect('mongodb://localhost/chat', function(err){
 });
 //define schema for mongo document
 var chatSchema = mongoose.Schema({
+    atricleid: { type: String, default: "bike" },
 	nick: String,
+    to: { type: String, default: "all" },
 	msg: String,
 	created: { type: Date, default: Date.now }
 });
@@ -63,16 +65,30 @@ io.sockets.on('connection', function(socket){
 	socket.on('send message', function(data, callback){
 		//remove the whitespace
 		var msg = data.trim();
+        //console.log(msg);
 		//if first three char is matched then whispering
-		if(msg.substr(0,3) === '/w '){
-			msg = msg.substr(3);
+		if(msg.substr(0,1) === '#'){
+			msg = msg.substr(1);
 			//get the index of the space, after whisper name then space and then msg
 			var ind = msg.indexOf(' ');
 			if(ind !== -1){
 				var name = msg.substring(0, ind);
 				var msg = msg.substring(ind + 1 );
 				if(name in users){
-					users[name].emit('whisper', { msg:msg, nick:socket.nickname });
+                    var newMsg = new Chat({ msg:msg, to:name, nick:socket.nickname });
+
+                    newMsg.save(function(err){
+                        if(err)
+                            throw err;
+
+                        //unicast the received msg to the receiver
+                        users[name].emit('new message', { msg:msg, to:name,nick:socket.nickname });
+                        //unicast the received msg to the sender to have his copy
+                        users[socket.nickname].emit('new message', { msg:msg, to:name,nick:socket.nickname });
+
+                        //broadcast the received msg to all including the sender
+                        //io.sockets.emit('new message', { msg:msg, nick:socket.nickname });
+                    });
 					//console.log('Whisper!');
 				} else{
 					callback('Error! Enter a valid user.');
@@ -83,18 +99,7 @@ io.sockets.on('connection', function(socket){
 			}
 			
 		} else{
-			//create a new document
-			var newMsg = new Chat({ msg:msg, nick:socket.nickname });
-			//store in mongodb
-			newMsg.save(function(err){
-				if(err) 
-					throw err;
-
-				//broadcast the received msg to all including the sender
-				io.sockets.emit('new message', { msg:msg, nick:socket.nickname });
-				//broadcast the received msg to all except the sender
-				//io.broadcast.emit('new message', data);
-			});
+            callback('Error! Please select a user.');
 			
 		}
 		
